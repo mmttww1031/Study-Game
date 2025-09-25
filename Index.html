@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$STUDY Stock Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-color: #2a2a2a;
+            --text-color: #f0f0f0;
+            --primary-color: #007bff;
+            --green: #28a745;
+            --red: #dc3545;
+            --yellow: #ffc107;
+            --gray: #6c757d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+
+        @media (max-width: 800px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--gray);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        h1, h2 {
+            margin: 0;
+        }
+        
+        h1 { font-size: 1.5em; }
+        h2 { font-size: 1.25em; border-bottom: 1px solid var(--gray); padding-bottom: 10px; }
+
+        .chart-controls button {
+            background: none;
+            border: 1px solid var(--gray);
+            padding: 5px 10px;
+            margin-left: 5px;
+            opacity: 0.6;
+        }
+        
+        .chart-controls button.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            opacity: 1;
+        }
+
+        #chart {
+            min-height: 350px;
+        }
+        
+        .status-ticker {
+            text-align: center;
+        }
+
+        .status-ticker #currentPrice {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .status-ticker .price-up { color: var(--green); }
+        .status-ticker .price-down { color: var(--red); }
+
+        .session-stats {
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        
+        .control-panel .card {
+            position: sticky;
+            top: 20px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 12px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            color: white;
+            font-weight: bold;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        button:disabled {
+            background-color: var(--gray);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .btn-session { background-color: var(--primary-color); }
+        .btn-bull { background-color: var(--green); }
+        .btn-bear { background-color: var(--red); }
+        .btn-reset { background-color: var(--yellow); color: #1a1a1a; margin-top: 10px;}
+        
+        #marketSentiment {
+            text-align: center;
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="card">
+                <div class="chart-header">
+                    <h1>$STUDY Performance</h1>
+                    <!-- NEW: Chart type controls -->
+                    <div class="chart-controls">
+                        <button id="candleChartBtn" class="active">Candlestick</button>
+                        <button id="lineChartBtn">Line</button>
+                    </div>
+                </div>
+                <div id="chart"></div>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="card">
+                <h2>Trading Desk</h2>
+                <div class="status-ticker">
+                    <div id="currentPrice">$100.00</div>
+                    <div class="session-stats">
+                        <span>High: <span id="sessionHigh">$0.00</span></span>
+                        <span>Low: <span id="sessionLow">$0.00</span></span>
+                    </div>
+                    <div id="marketSentiment">Session Inactive</div>
+                </div>
+                
+                <div class="button-grid">
+                    <button id="startSessionBtn" class="btn-session">🚀 Start New Session</button>
+                    
+                    <button id="correctSubPart" class="btn-bull" disabled>✓ Correct Sub-Part (+$0.50)</button>
+                    <button id="correctFull" class="btn-bull" disabled>✓✓ Correct Full Question (+$2.00)</button>
+                    <button id="masteredConcept" class="btn-bull" disabled>★ Mastered Concept (+$5.00)</button>
+                    <button id="completeMilestone" class="btn-bull" disabled>🏆 Complete Paper/Chapter (+$10.00)</button>
+                    
+                    <button id="wrongSubPart" class="btn-bear" disabled>✗ Wrong Sub-Part (-$0.75)</button>
+                    <button id="wrongFull" class="btn-bear" disabled>✗✗ Wrong Full Question (-$3.00)</button>
+                    <button id="conceptualGap" class="btn-bear" disabled>! Conceptual Gap (-$8.00)</button>
+                    <button id="distracted" class="btn-bear" disabled>📱 Distracted (-$5.00)</button>
+
+                    <button id="endSessionBtn" class="btn-session" style="background-color: var(--red);" disabled>🛑 End Session</button>
+                    
+                    <!-- NEW: Reset Button -->
+                    <button id="resetDataBtn" class="btn-reset">⚠️ Reset All Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- STATE MANAGEMENT ---
+            let sessionActive = false;
+            let currentPrice = 100.00;
+            let lastClosePrice = 100.00;
+            let sessionOpen, sessionHigh, sessionLow;
+            let marketMultiplier = 1;
+            let marketSentimentText = 'Session Inactive';
+            let studyHistory = [];
+            let currentChartType = 'candlestick'; // NEW: Track current chart type
+
+            // --- UI ELEMENTS ---
+            const currentPriceEl = document.getElementById('currentPrice');
+            const sessionHighEl = document.getElementById('sessionHigh');
+            const sessionLowEl = document.getElementById('sessionLow');
+            const marketSentimentEl = document.getElementById('marketSentiment');
+            
+            const actionButtons = document.querySelectorAll('.btn-bull, .btn-bear');
+            const startSessionBtn = document.getElementById('startSessionBtn');
+            const endSessionBtn = document.getElementById('endSessionBtn');
+
+            // NEW: Chart and Reset Buttons
+            const candleChartBtn = document.getElementById('candleChartBtn');
+            const lineChartBtn = document.getElementById('lineChartBtn');
+            const resetDataBtn = document.getElementById('resetDataBtn');
+
+            // --- CHART CONFIGURATION ---
+            const chartOptions = {
+                series: [{ name: '$STUDY', data: [] }],
+                chart: { type: 'candlestick', height: 350, toolbar: { show: true }, zoom: { enabled: true } },
+                title: { text: '$STUDY Price History', align: 'left', style: { color: '#f0f0f0' } },
+                xaxis: { type: 'datetime', labels: { style: { colors: '#aaa' } } },
+                yaxis: { tooltip: { enabled: true }, labels: { formatter: (val) => `$${val.toFixed(2)}`, style: { colors: '#aaa' } } },
+                grid: { borderColor: '#444' },
+                theme: { mode: 'dark' },
+                tooltip: { theme: 'dark' }
+            };
+            const chart = new ApexCharts(document.querySelector("#chart"), chartOptions);
+            chart.render();
+
+            // --- DATA PERSISTENCE ---
+            function loadData() {
+                const savedData = localStorage.getItem('studyHistory');
+                if (savedData) {
+                    studyHistory = JSON.parse(savedData);
+                    if (studyHistory.length > 0) {
+                        lastClosePrice = studyHistory[studyHistory.length - 1].y[3];
+                        currentPrice = lastClosePrice;
+                    }
+                }
+                updateChart();
+                updateDisplay();
+            }
+
+            function saveData() {
+                localStorage.setItem('studyHistory', JSON.stringify(studyHistory));
+            }
+
+            // --- CORE LOGIC ---
+            function updateDisplay() {
+                currentPriceEl.textContent = `$${currentPrice.toFixed(2)}`;
+                currentPriceEl.classList.remove('price-up', 'price-down');
+                if(sessionActive) {
+                    if (currentPrice > sessionOpen) currentPriceEl.classList.add('price-up');
+                    if (currentPrice < sessionOpen) currentPriceEl.classList.add('price-down');
+                }
+                sessionHighEl.textContent = sessionActive ? `$${sessionHigh.toFixed(2)}` : 'N/A';
+                sessionLowEl.textContent = sessionActive ? `$${sessionLow.toFixed(2)}` : 'N/A';
+                marketSentimentEl.textContent = marketSentimentText;
+                marketSentimentEl.style.backgroundColor = 'var(--gray)';
+                if (marketMultiplier > 1) marketSentimentEl.style.backgroundColor = 'var(--green)';
+                if (marketMultiplier < 1) marketSentimentEl.style.backgroundColor = 'var(--red)';
+            }
+            
+            // NEW: Enhanced updateChart function
+            function updateChart() {
+                let seriesData;
+                if (currentChartType === 'line') {
+                    // Convert candlestick data to line data (using close price)
+                    seriesData = studyHistory.map(d => ({ x: d.x, y: d.y[3] }));
+                } else {
+                    seriesData = studyHistory;
+                }
+                chart.updateSeries([{ data: seriesData }]);
+            }
+
+            function toggleButtons() {
+                startSessionBtn.disabled = sessionActive;
+                endSessionBtn.disabled = !sessionActive;
+                actionButtons.forEach(btn => btn.disabled = !sessionActive);
+            }
+            
+            function startSession() {
+                sessionActive = true;
+                sessionOpen = lastClosePrice;
+                currentPrice = sessionOpen;
+                sessionHigh = sessionOpen;
+                sessionLow = sessionOpen;
+                const roll = Math.floor(Math.random() * 6) + 1;
+                switch (roll) {
+                    case 1: marketMultiplier = 0.5; marketSentimentText = '🔥 Market Crash (Losses x2)'; break;
+                    case 2: marketMultiplier = 0.75; marketSentimentText = '📉 Bear Market (Losses x1.5)'; break;
+                    case 3: marketMultiplier = 1; marketSentimentText = '⚖️ Stable Market'; break;
+                    case 4: marketMultiplier = 1.5; marketSentimentText = '📈 Bull Market (Gains x1.5)'; break;
+                    case 5: marketMultiplier = 2; marketSentimentText = '🚀 Market Rally (Gains x2)'; break;
+                    case 6: marketMultiplier = 3; marketSentimentText = '⭐ Supernova (Gains x3)'; break;
+                }
+                toggleButtons();
+                updateDisplay();
+            }
+
+            function endSession() {
+                if (!sessionActive) return;
+                sessionActive = false;
+                lastClosePrice = currentPrice;
+                const newCandle = {
+                    x: new Date().getTime(),
+                    y: [sessionOpen.toFixed(2), sessionHigh.toFixed(2), sessionLow.toFixed(2), currentPrice.toFixed(2)]
+                };
+                studyHistory.push(newCandle);
+                marketSentimentText = 'Session Inactive';
+                saveData();
+                updateChart();
+                toggleButtons();
+                updateDisplay();
+            }
+
+            function handleAction(baseValue) {
+                if (!sessionActive) return;
+                let actualChange = baseValue;
+                if (baseValue > 0 && marketMultiplier > 1) {
+                    actualChange *= marketMultiplier;
+                } else if (baseValue < 0 && marketMultiplier < 1) {
+                    actualChange /= marketMultiplier;
+                }
+                currentPrice += actualChange;
+                sessionHigh = Math.max(sessionHigh, currentPrice);
+                sessionLow = Math.min(sessionLow, currentPrice);
+                updateDisplay();
+            }
+
+            // NEW: Function to switch chart type
+            function setChartType(type) {
+                currentChartType = type;
+                let newOptions = { chart: { type: type } };
+                if (type === 'line') {
+                    newOptions.stroke = { width: 2, curve: 'smooth' };
+                    lineChartBtn.classList.add('active');
+                    candleChartBtn.classList.remove('active');
+                } else {
+                    candleChartBtn.classList.add('active');
+                    lineChartBtn.classList.remove('active');
+                }
+                chart.updateOptions(newOptions);
+                updateChart(); // Redraw chart with correct data format
+            }
+            
+            // --- EVENT LISTENERS ---
+            startSessionBtn.addEventListener('click', startSession);
+            endSessionBtn.addEventListener('click', endSession);
+            
+            document.getElementById('correctSubPart').addEventListener('click', () => handleAction(0.50));
+            document.getElementById('correctFull').addEventListener('click', () => handleAction(2.00));
+            document.getElementById('masteredConcept').addEventListener('click', () => handleAction(5.00));
+            document.getElementById('completeMilestone').addEventListener('click', () => handleAction(10.00));
+            document.getElementById('wrongSubPart').addEventListener('click', () => handleAction(-0.75));
+            document.getElementById('wrongFull').addEventListener('click', () => handleAction(-3.00));
+            document.getElementById('conceptualGap').addEventListener('click', () => handleAction(-8.00));
+            document.getElementById('distracted').addEventListener('click', () => handleAction(-5.00));
+
+            // NEW: Event listeners for new buttons
+            candleChartBtn.addEventListener('click', () => setChartType('candlestick'));
+            lineChartBtn.addEventListener('click', () => setChartType('line'));
+
+            resetDataBtn.addEventListener('click', () => {
+                const confirmed = confirm("Are you sure you want to reset all your study data? This action cannot be undone.");
+                if (confirmed) {
+                    localStorage.removeItem('studyHistory');
+                    // Easiest way to reset the whole state is to just reload the page
+                    location.reload(); 
+                }
+            });
+            
+            // --- INITIALIZATION ---
+            loadData();
+            toggleButtons();
+        });
+    </script>
+</body>
+</html>
