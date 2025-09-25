@@ -162,7 +162,6 @@
             <div class="card">
                 <div class="chart-header">
                     <h1>$STUDY Performance</h1>
-                    <!-- NEW: Chart type controls -->
                     <div class="chart-controls">
                         <button id="candleChartBtn" class="active">Candlestick</button>
                         <button id="lineChartBtn">Line</button>
@@ -199,7 +198,6 @@
 
                     <button id="endSessionBtn" class="btn-session" style="background-color: var(--red);" disabled>🛑 End Session</button>
                     
-                    <!-- NEW: Reset Button -->
                     <button id="resetDataBtn" class="btn-reset">⚠️ Reset All Data</button>
                 </div>
             </div>
@@ -216,7 +214,7 @@
             let marketMultiplier = 1;
             let marketSentimentText = 'Session Inactive';
             let studyHistory = [];
-            let currentChartType = 'candlestick'; // NEW: Track current chart type
+            let currentChartType = 'candlestick';
 
             // --- UI ELEMENTS ---
             const currentPriceEl = document.getElementById('currentPrice');
@@ -228,7 +226,6 @@
             const startSessionBtn = document.getElementById('startSessionBtn');
             const endSessionBtn = document.getElementById('endSessionBtn');
 
-            // NEW: Chart and Reset Buttons
             const candleChartBtn = document.getElementById('candleChartBtn');
             const lineChartBtn = document.getElementById('lineChartBtn');
             const resetDataBtn = document.getElementById('resetDataBtn');
@@ -253,7 +250,9 @@
                 if (savedData) {
                     studyHistory = JSON.parse(savedData);
                     if (studyHistory.length > 0) {
-                        lastClosePrice = studyHistory[studyHistory.length - 1].y[3];
+                        const lastSessionData = studyHistory[studyHistory.length - 1].y;
+                        // FIX: Ensure the loaded price is a number using parseFloat
+                        lastClosePrice = parseFloat(lastSessionData[3]);
                         currentPrice = lastClosePrice;
                     }
                 }
@@ -281,12 +280,10 @@
                 if (marketMultiplier < 1) marketSentimentEl.style.backgroundColor = 'var(--red)';
             }
             
-            // NEW: Enhanced updateChart function
             function updateChart() {
                 let seriesData;
                 if (currentChartType === 'line') {
-                    // Convert candlestick data to line data (using close price)
-                    seriesData = studyHistory.map(d => ({ x: d.x, y: d.y[3] }));
+                    seriesData = studyHistory.map(d => ({ x: d.x, y: parseFloat(d.y[3]) }));
                 } else {
                     seriesData = studyHistory;
                 }
@@ -322,11 +319,14 @@
                 if (!sessionActive) return;
                 sessionActive = false;
                 lastClosePrice = currentPrice;
+                
+                // FIX: Store raw numbers, not strings from .toFixed()
                 const newCandle = {
                     x: new Date().getTime(),
-                    y: [sessionOpen.toFixed(2), sessionHigh.toFixed(2), sessionLow.toFixed(2), currentPrice.toFixed(2)]
+                    y: [sessionOpen, sessionHigh, sessionLow, currentPrice]
                 };
                 studyHistory.push(newCandle);
+
                 marketSentimentText = 'Session Inactive';
                 saveData();
                 updateChart();
@@ -348,7 +348,6 @@
                 updateDisplay();
             }
 
-            // NEW: Function to switch chart type
             function setChartType(type) {
                 currentChartType = type;
                 let newOptions = { chart: { type: type } };
@@ -361,7 +360,7 @@
                     lineChartBtn.classList.remove('active');
                 }
                 chart.updateOptions(newOptions);
-                updateChart(); // Redraw chart with correct data format
+                updateChart();
             }
             
             // --- EVENT LISTENERS ---
@@ -377,7 +376,6 @@
             document.getElementById('conceptualGap').addEventListener('click', () => handleAction(-8.00));
             document.getElementById('distracted').addEventListener('click', () => handleAction(-5.00));
 
-            // NEW: Event listeners for new buttons
             candleChartBtn.addEventListener('click', () => setChartType('candlestick'));
             lineChartBtn.addEventListener('click', () => setChartType('line'));
 
@@ -385,7 +383,6 @@
                 const confirmed = confirm("Are you sure you want to reset all your study data? This action cannot be undone.");
                 if (confirmed) {
                     localStorage.removeItem('studyHistory');
-                    // Easiest way to reset the whole state is to just reload the page
                     location.reload(); 
                 }
             });
@@ -396,4 +393,4 @@
         });
     </script>
 </body>
-</html>
+</html>                                                
