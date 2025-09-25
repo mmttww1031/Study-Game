@@ -7,7 +7,6 @@
 A single-file, zero-dependency web app that turns your study sessions into a personal stock market. Gamify your learning, stay motivated, and visualize your progress with live-updating candlestick and line charts.
 
 
-*(Feel free to replace this with your own screenshot!)*
 
 ## 🚀 About This Project
 
